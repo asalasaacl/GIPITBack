@@ -79,14 +79,15 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { candidate_id, management_id, start_date, end_date, position, rate } = await req.json();
 
-  const status = end_date ? "activo" : "desvinculado";
-
   try {
     if (!rate || !position) {
       return NextResponse.json({ 
         error: 'El valor hora y el cargo son campos requeridos' 
       }, { status: 400 });
     }
+
+    // Determinar el status inicial
+    const status = end_date ? "activo" : "desvinculado";
 
     const candidateManagement = await prisma.candidate_management.create({
       data: {
@@ -99,9 +100,33 @@ export async function POST(req: NextRequest) {
         rate: parseFloat(rate)
       },
     });
+
+    // Si hay fecha de término y el status es activo, programar la actualización
+    if (end_date && status === "activo") {
+      const endDateTime = new Date(end_date);
+      const now = new Date();
+      
+      if (endDateTime > now) {
+        // Programar la actualización del status
+        const timeUntilEnd = endDateTime.getTime() - now.getTime();
+        
+        setTimeout(async () => {
+          try {
+            await prisma.candidate_management.update({
+              where: { id: candidateManagement.id },
+              data: { status: "desvinculado" }
+            });
+          } catch (error) {
+            console.error("Error al actualizar el status:", error);
+          }
+        }, timeUntilEnd);
+      }
+    }
+
     return NextResponse.json(candidateManagement, { status: 201 });
   } catch (error) {
-    console.error("Error al crear la relación con management:", error);
-    return NextResponse.json({ error: `Error al crear el registro - ${error}` }, { status: 500 });
+    return NextResponse.json({ 
+      error: `Error al crear el registro: ${error}` 
+    }, { status: 500 });
   }
 }

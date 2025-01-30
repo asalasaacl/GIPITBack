@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
     end_date,
     position,
     rate,
+    status
   } = await req.json();
 
   try {
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
           client_comments,
           match_percent,
           interview_questions,
-          stage
+          stage,
         },
       });
     }
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
         data: {
           candidate_id: candidate.id,
           management_id,
-          status: 'activo',
+          status,
           start_date,
           end_date,
           position,
